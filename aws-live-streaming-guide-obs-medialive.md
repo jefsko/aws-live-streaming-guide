@@ -1,6 +1,7 @@
 # Live Streaming from a Windows 11 PC to AWS with OBS and AWS Elemental MediaLive
 
-**Last verified:** June 28, 2026  
+**Last verified:** July 1, 2026  
+**Guide version:** v1.1.0  
 **Primary recommended path for this version:** OBS Studio on Windows 11 → AWS Elemental MediaLive RTMP Push input → HLS output to AWS Elemental MediaPackage v2 → Amazon CloudFront → browser playback  
 **Difficulty level:** Intermediate to advanced. This version is intentionally more advanced than the Amazon IVS version.  
 **Quick-start requirement:** Includes a one-page quick-start path before the deeper MediaLive explanation.  
@@ -46,7 +47,7 @@
 | Stable internet connection | Your PC must upload the stream continuously to MediaLive. | Run a speed test. Your upload speed should comfortably exceed your target OBS bitrate. |
 | AWS account | Needed to create MediaLive, MediaPackage, CloudFront, IAM, and optional monitoring resources. | You can sign in to the AWS Management Console. |
 | AWS billing access | Needed to monitor costs and create budgets. | You can open **Billing and Cost Management** and **AWS Budgets**. AWS Budgets supports cost budgets and alerts.[^aws-budgets] |
-| AWS permissions | Needed to create MediaLive inputs/channels, MediaPackage v2 resources, CloudFront distributions, IAM roles, and budgets. | Use an admin-capable lab account or an IAM role/user with appropriate permissions. Avoid root credentials for daily work.[^iam-best-practices] |
+| AWS permissions | Needed to create MediaLive inputs/channels, MediaPackage v2 resources, CloudFront distributions, IAM roles, and budgets. | Use an administrator-capable lab account, IAM Identity Center access, or an IAM user/group with explicit MediaLive, MediaPackage, CloudFront, IAM pass-role, and billing permissions. This guide now includes explicit setup steps in [Step 0](#step-0-set-up-aws-access-iam-roles-and-permissions) and [Appendix M](#appendix-m-aws-access-iam-roles-and-permissions-setup). Avoid root credentials for daily work.[^iam-best-practices] |
 | OBS Studio | The local encoder that captures screen/camera/audio and pushes RTMP to MediaLive. | Download OBS from the official OBS website. OBS supports Windows 10 and 11.[^obs-download] |
 | Modern browser | Needed to watch the HLS stream. | Chrome, Edge, Firefox, or Safari are acceptable. Safari can play HLS natively; other browsers usually need a JavaScript player such as hls.js. |
 | Optional AWS CLI v2 | Useful for repeatability and verification. Console instructions are primary. | Install and configure AWS CLI v2 if you want CLI examples.[^aws-cli-getting-started] |
@@ -56,7 +57,7 @@
 | Initial viewer assumption | Keeps the architecture appropriately scoped. | This guide assumes a small public test stream or small audience, not a large enterprise broadcast. |
 | Region assumption | Examples use `us-west-2` unless noted. | Choose an AWS Region that supports MediaLive and MediaPackage v2. Check current regional availability before starting.[^aws-regional-services] |
 
-**Checkpoint:** You can sign in to AWS, you can install OBS, you know which AWS Region you will use, and you have non-sensitive content ready for testing.
+**Checkpoint:** You can sign in to AWS, you can install OBS, you know which AWS Region you will use, you know which IAM identity you will use, and you have non-sensitive content ready for testing.
 
 ---
 
@@ -244,63 +245,67 @@ This is the shortest safe path to prove the MediaLive workflow works. It is stil
 
 ### Quick-start steps
 
-1. **Sign in to AWS.**
+1. **Confirm AWS access and permissions.**
+   - Use a non-root AWS identity that can create MediaLive, MediaPackage v2, CloudFront, IAM role, and billing/budget resources.
+   - If you do not already have that access, complete [Step 0](#step-0-set-up-aws-access-iam-roles-and-permissions) before creating resources.
+
+2. **Sign in to AWS.**
    - Use the AWS Management Console.
    - Choose the Region you want to use, such as `us-west-2`.
 
-2. **Set up a cost budget.**
+3. **Set up a cost budget.**
    - Open **Billing and Cost Management → Budgets**.
    - Create a small budget alert before starting.
 
-3. **Create the downstream origin first: MediaPackage v2.**
+4. **Create the downstream origin first: MediaPackage v2.**
    - Open **AWS Elemental MediaPackage**.
    - Create a live channel/channel group/origin endpoint according to the current MediaPackage v2 Console flow.
    - Choose HLS for the first browser-playback test.
    - Record the MediaPackage input/destination information needed by MediaLive.
    - If the Console differs from AWS docs, proceed cautiously and verify against current official documentation.
 
-4. **Create a CloudFront distribution for MediaPackage playback.**
+5. **Create a CloudFront distribution for MediaPackage playback.**
    - Open **CloudFront**.
    - Create a distribution using the MediaPackage endpoint as the origin.
    - Use HTTPS.
    - Record the CloudFront domain name.
    - CloudFront documentation describes serving live video formatted with MediaPackage through a distribution.[^cloudfront-live-mediapackage]
 
-5. **Create a MediaLive input security group.**
+6. **Create a MediaLive input security group.**
    - Open **AWS Elemental MediaLive**.
    - Create an input security group that allows your public IP address.
    - Avoid allowing `0.0.0.0/0` except for a temporary lab test, and remove it immediately afterward.
 
-6. **Create a MediaLive RTMP Push input.**
+7. **Create a MediaLive RTMP Push input.**
    - In MediaLive, create an **RTMP Push** input.
    - Attach the input security group.
    - Record the destination URL(s). AWS documents RTMP Push as the mode where the upstream system pushes content to MediaLive.[^medialive-rtmp-push]
 
-7. **Create a MediaLive channel.**
+8. **Create a MediaLive channel.**
    - Attach the RTMP Push input.
    - Choose a simple HLS output group.
    - Send the HLS output to MediaPackage over HTTPS. AWS documents HLS output groups to MediaPackage.[^medialive-hls-mediapackage]
    - Use a simple single-rendition or small adaptive ladder for the first test.
 
-8. **Configure OBS.**
+9. **Configure OBS.**
    - Create a safe test scene.
    - Configure **Settings → Stream → Custom**.
    - Server: MediaLive RTMP destination URL.
    - Stream key/path: the MediaLive application/stream name required by the destination.
    - Set bitrate and keyframe interval conservatively.
 
-9. **Start the MediaLive channel.**
+10. **Start the MediaLive channel.**
    - Start the channel manually. AWS says MediaLive channels do not start automatically except recovery cases, and most AWS Cloud channels start in 3 minutes or less, though up to 10 minutes can be normal.[^medialive-start-stop]
 
-10. **Start OBS streaming.**
+11. **Start OBS streaming.**
     - Confirm OBS is pushing video.
     - Confirm MediaLive input is receiving content.
 
-11. **Watch playback.**
+12. **Watch playback.**
     - Use the CloudFront HLS URL in a browser/player.
     - Safari may play HLS natively; Chrome/Edge/Firefox commonly need hls.js.
 
-12. **Stop everything.**
+13. **Stop everything.**
     - Stop OBS.
     - Stop the MediaLive channel.
     - Delete or intentionally retain test resources.
@@ -324,6 +329,65 @@ Continue only if you want the full explanation, troubleshooting, CLI equivalents
 ---
 
 ## Step-by-step setup
+
+### Step 0: Set up AWS access, IAM, roles, and permissions
+
+This step fills in an AWS-specific setup detail that is easy to gloss over: the guide later tells you to create MediaLive inputs/channels, MediaPackage v2 resources, CloudFront distributions, MediaLive service roles, input security groups, and budgets, so your AWS identity must actually be allowed to do those things.
+
+AWS recommends that human users use federation with an identity provider and temporary credentials where possible, and that IAM users with long-term credentials be used only for specific cases that are not supported by federated users.[^iam-create-user] For a personal lab account, you might still use an IAM user, but you should understand that this is a convenience tradeoff, not the strongest production pattern.
+
+#### Recommended access pattern
+
+Use one of these patterns:
+
+| Pattern | When to use it | Notes |
+|---|---|---|
+| IAM Identity Center / federated access | Best practice for a real account or organization | Use a permission set that allows MediaLive, MediaPackage, CloudFront, IAM pass-role, and billing visibility. |
+| Existing administrator-capable lab user | Fastest for a personal test account | Acceptable for learning, but reduce permissions later. |
+| IAM user in an IAM group | Practical fallback for a personal lab | Create the user/group explicitly and attach only the needed policies. |
+
+#### IAM user/group fallback for a lab account
+
+Use this only if you are not using IAM Identity Center or another federated identity system.
+
+1. Sign in to the AWS Console as an account administrator.
+2. Open the **IAM** console.
+3. Choose **User groups**.
+4. Choose **Create group**.
+5. Name the group something like `aws-live-streaming-medialive-admins`.
+6. Attach service policies for the lab workflow:
+   - `AWSElementalMediaLiveFullAccess` for MediaLive setup. AWS documents this policy as allowing `medialive:*` on all resources.[^medialive-full-access-policy]
+   - `AWSElementalMediaPackageV2FullAccess` for MediaPackage v2 live resources. AWS documents this policy as allowing all actions on all live resources in MediaPackage.[^mediapackage-managed-policies]
+   - `CloudFrontFullAccess` for CloudFront distribution setup. AWS documents this policy as allowing administrative permissions to CloudFront resources.[^cloudfront-managed-policies]
+7. Add IAM permissions needed for the MediaLive service-role workflow, or use an existing admin-capable lab user. For the simple `MediaLiveAccessRole` wizard, AWS says users need IAM actions such as `ListRole`, `PassRole`, `CreateRole`, `PutRolePolicy`, `AttachRolePolicy`, and related update actions depending on the wizard path.[^medialive-trusted-entity-simple] In a restricted account, ask your administrator to create the MediaLive service role and give you the role ARN.
+8. For billing visibility, confirm whether root or an administrator has activated IAM access to Billing. AWS Billing documentation says IAM users and roles cannot access the Billing and Cost Management console by default; the account root user must first activate IAM access, and permissions must still be attached afterward.[^aws-billing-access]
+9. Attach billing permissions appropriate for the lab, such as `AWSBillingReadOnlyAccess` for viewing bills or `Billing` if you need to modify budgets/payment-related settings. AWS documents `Billing` as granting Billing and Cost Management permissions, including viewing usage and modifying budgets/payment methods.[^aws-billing-managed-policies]
+10. Choose **Create group**.
+11. Choose **Users**.
+12. Choose **Create user**.
+13. Enter a user name, such as `aws-live-streaming-lab-user`.
+14. If the user needs Console access, select the option to provide AWS Management Console access. IAM documentation notes that console access requires a password, and users still need permissions attached through policies or groups.[^iam-console-access]
+15. Add the user to the group you created.
+16. Finish creating the user.
+17. Enable MFA for the user before using the account for anything beyond a quick lab. AWS IAM best practices recommend MFA and least-privilege permissions.[^iam-best-practices]
+18. Create access keys only if you need the AWS CLI. AWS warns not to use root access keys and not to put access keys in project files.[^iam-access-keys]
+
+#### MediaLive service role versus your human user permissions
+
+Do not confuse these two permission layers:
+
+| Permission layer | Who/what uses it | Why it matters |
+|---|---|---|
+| Human user/group/role permissions | You, in the AWS Console or CLI | Lets you create MediaLive, MediaPackage, CloudFront, IAM, and budget resources. |
+| MediaLive service role | MediaLive service, when running your channel | Lets MediaLive access the downstream services/resources needed by the channel. |
+
+MediaLive documentation says you must choose a role for MediaLive to assume when it works with a channel, and you cannot create the channel without a role.[^medialive-role-arn] For a lab, the simple `MediaLiveAccessRole` wizard is usually easiest. For production, use a more narrowly scoped custom trusted entity role.
+
+**Expected result:** You have a non-root AWS identity that can create the MediaLive workflow resources, pass or create the MediaLive service role, view billing/budgets, and optionally use the AWS CLI.
+
+**Checkpoint:** You can sign in as the intended IAM/federated user and open MediaLive, MediaPackage, CloudFront, AWS Budgets, Billing, and IAM role pages without permission errors.
+
+---
 
 ### Step 1: Sign in and choose a Region
 
@@ -550,21 +614,7 @@ Open **Settings → Output → Streaming**:
 
 ---
 
-### Step 12: Start the MediaLive channel
-
-1. In MediaLive, open the channel.
-2. Choose **Start**.
-3. Wait for the channel to enter a running state.
-
-AWS documentation says most AWS Cloud MediaLive channels start in 3 minutes or less, but up to 10 minutes can be normal.[^medialive-start-stop]
-
-**Expected result:** The MediaLive channel is running and waiting for input.
-
-**Checkpoint:** Channel state is running.
-
----
-
-### Step 13: Start streaming in OBS
+### Step 12: Start streaming in OBS
 
 1. Click **Start Streaming** in OBS.
 2. Watch the OBS status bar.
@@ -572,6 +622,8 @@ AWS documentation says most AWS Cloud MediaLive channels start in 3 minutes or l
    - Stable bitrate
    - Low or no dropped frames
    - No reconnect loop
+
+For an RTMP Push input, start OBS before starting the MediaLive channel. AWS documentation says that if the first input is a push input, it must be pushing to MediaLive before you start the channel.[^medialive-start-stop]
 
 **Expected result:** OBS pushes video to the MediaLive RTMP Push input.
 
@@ -582,7 +634,22 @@ AWS documentation says most AWS Cloud MediaLive channels start in 3 minutes or l
 - Check firewall/VPN.
 - Lower bitrate.
 
-**Checkpoint:** OBS indicates it is streaming and MediaLive input shows active/healthy where available.
+**Checkpoint:** OBS indicates it is streaming.
+
+---
+
+### Step 13: Start the MediaLive channel
+
+1. In MediaLive, open the channel.
+2. Confirm OBS is already streaming to the RTMP Push input.
+3. Choose **Start**.
+4. Wait for the channel to enter a running state.
+
+AWS documentation says most AWS Cloud MediaLive channels start in 3 minutes or less, but up to 10 minutes can be normal.[^medialive-start-stop]
+
+**Expected result:** The MediaLive channel is running and receiving the OBS input.
+
+**Checkpoint:** Channel state is running and MediaLive input shows active/healthy where available.
 
 ---
 
@@ -682,8 +749,8 @@ Replace `HLS_PLAYBACK_URL` with your CloudFront HLS manifest URL.
 
 ### Basic test
 
-1. Start the MediaLive channel.
-2. Start OBS streaming.
+1. Start OBS streaming.
+2. Start the MediaLive channel.
 3. Open the HLS player page.
 4. Confirm picture.
 5. Confirm audio.
@@ -1113,7 +1180,7 @@ See [Glossary](#glossary). Add new terms to this appendix as the guide evolves.
 <details>
 <summary><strong>Appendix G: Source links and last-verified notes</strong></summary>
 
-**Last verified:** June 28, 2026.
+**Last verified:** July 1, 2026.
 
 Official sources used:
 
@@ -1136,6 +1203,22 @@ Official sources used:
 [^iam-root]: Root user best practices: https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html  
 [^aws-budgets]: Managing costs with AWS Budgets: https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html  
 [^aws-regional-services]: AWS Regional Services list: https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/  
+
+[^iam-create-user]: Create an IAM user: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html  
+[^iam-create-group]: Create IAM groups: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_groups_create.html  
+[^iam-console-access]: Control IAM user access to the AWS Management Console: https://docs.aws.amazon.com/IAM/latest/UserGuide/console_controlling-access.html  
+[^iam-access-keys]: Manage access keys for IAM users: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html  
+[^aws-billing-access]: Overview of managing access permissions in AWS Billing: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/control-access-billing.html  
+[^aws-billing-managed-policies]: AWS Billing managed policies: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/managed-policies.html  
+[^medialive-full-access-policy]: AWSElementalMediaLiveFullAccess AWS managed policy: https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSElementalMediaLiveFullAccess.html  
+[^medialive-trusted-entity-simple]: MediaLive simple trusted entity setup: https://docs.aws.amazon.com/medialive/latest/ug/setup-trusted-entity-simple.html  
+[^medialive-role-arn]: MediaLive IAM role and ARN: https://docs.aws.amazon.com/medialive/latest/ug/role-and-remember-arn.html  
+[^medialive-input-security-group]: MediaLive input security groups: https://docs.aws.amazon.com/medialive/latest/ug/create-input-security-groups.html  
+[^medialive-user-permissions]: MediaLive IAM permissions for users: https://docs.aws.amazon.com/medialive/latest/ug/setting-up-for-production.html  
+[^mediapackage-managed-policies]: MediaPackage v2 managed policies: https://docs.aws.amazon.com/mediapackage/latest/userguide/security-iam-awsmanpol.html  
+[^cloudfront-managed-policies]: CloudFront managed policies: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/security-iam-awsmanpol.html  
+
+No Cloudflare-specific source is cited in this version because the guides do not currently include Cloudflare-specific DNS, proxy, or hosting steps. If Cloudflare DNS or proxying is added later, official Cloudflare documentation should be verified and cited in this appendix.
 
 Known likely-to-change areas:
 
@@ -1233,6 +1316,92 @@ Known likely-to-change areas:
 | OBS Stream settings | Step 11 | Shows where Server and Stream Key/path go. |
 | HLS player page | Step 15 | Confirms what success looks like. |
 | Cleanup checklist screenshot | Cleanup section | Reinforces cost control. |
+
+</details>
+
+<details>
+<summary><strong>Appendix M: AWS access, IAM, roles, and permissions setup</strong></summary>
+
+This appendix gives more explicit AWS access setup instructions for readers who are new to IAM, MediaLive service roles, and cross-service AWS media permissions.
+
+## Best-practice reminder
+
+AWS recommends federation with temporary credentials for human users where possible, MFA, least-privilege permissions, and not using the root user for everyday tasks.[^iam-best-practices] Use this appendix to get a lab working, then tighten permissions after you know exactly which actions you need.
+
+## Option A: Use IAM Identity Center or an existing administrator-approved role
+
+Use this option if your AWS account belongs to an organization or if someone else manages AWS access.
+
+1. Ask your AWS administrator for access to the target AWS account.
+2. Ask for permission to create and manage MediaLive, MediaPackage v2, CloudFront, CloudWatch, AWS Budgets, and IAM pass-role resources.
+3. Ask whether the MediaLive service role already exists.
+4. Ask for the MediaLive service role ARN if your account uses a custom role.
+5. Ask whether billing access is enabled for IAM/role identities.
+6. Sign in using the provided AWS access portal or role.
+7. Verify you can open MediaLive, MediaPackage, CloudFront, IAM roles, AWS Budgets, and Billing.
+
+## Option B: Create an IAM group and user for a personal lab
+
+1. Sign in as the account owner or an administrator.
+2. Open the **IAM** console.
+3. Choose **User groups** → **Create group**.
+4. Name the group `aws-live-streaming-medialive-admins`.
+5. Attach these starter policies for a lab:
+   - `AWSElementalMediaLiveFullAccess`
+   - `AWSElementalMediaPackageV2FullAccess`
+   - `CloudFrontFullAccess`
+   - `AWSBillingReadOnlyAccess` for billing visibility or `Billing` if you need to create/update budgets and billing settings
+6. Add IAM permissions for the MediaLive service-role workflow, or use an existing admin-capable lab user. For the simple `MediaLiveAccessRole` wizard, AWS documents IAM actions such as `ListRole`, `PassRole`, `CreateRole`, `PutRolePolicy`, `AttachRolePolicy`, and related update actions depending on the wizard path.[^medialive-trusted-entity-simple]
+7. Choose **Create group**.
+8. Choose **Users** → **Create user**.
+9. Name the user `aws-live-streaming-lab-user`.
+10. Select Console access only if this user needs to sign in to the AWS Console.
+11. Add the user to the group.
+12. Finish user creation.
+13. Enable MFA.
+14. Create access keys only if you will use AWS CLI; never create or use root access keys.
+
+## MediaLive service role setup
+
+MediaLive needs a service role that MediaLive can assume when the channel runs. This is separate from your human user permissions.
+
+### Simple lab option
+
+1. Open **AWS Elemental MediaLive**.
+2. Begin creating a channel.
+3. In the IAM role area, choose the option to create or use the simple `MediaLiveAccessRole` if the Console offers it.
+4. Let MediaLive create/update the role.
+5. Reuse that role for this lab channel.
+
+### Administrator-created option
+
+1. Ask an administrator to create a role trusted by `medialive.amazonaws.com`.
+2. Attach policies that allow only the resources your MediaLive channel needs.
+3. Give you the role ARN.
+4. In MediaLive channel setup, choose the option to specify or use that role ARN.
+
+## MediaLive permission quick reference
+
+| Need | Starter policy or approach |
+|---|---|
+| Create/manage MediaLive resources | `AWSElementalMediaLiveFullAccess` |
+| Create/manage MediaPackage v2 live resources | `AWSElementalMediaPackageV2FullAccess` |
+| Create/manage CloudFront distributions | `CloudFrontFullAccess` |
+| Create/use simple MediaLive service role | IAM permissions for `PassRole`, `CreateRole`, `PutRolePolicy`, `AttachRolePolicy`, and related wizard actions |
+| Billing visibility only | `AWSBillingReadOnlyAccess` after IAM billing access is activated |
+| Budget/billing changes | `Billing` or more specific customer-managed policy |
+
+## Verification checklist
+
+- [ ] You are not using root for routine work.
+- [ ] MFA is enabled.
+- [ ] The intended user can open MediaLive.
+- [ ] The intended user can create an input security group.
+- [ ] The intended user can create or use the MediaLive service role.
+- [ ] The intended user can open MediaPackage v2.
+- [ ] The intended user can open CloudFront.
+- [ ] The intended user can open AWS Budgets/Billing as needed.
+- [ ] Any access keys are stored securely and not committed to Git.
 
 </details>
 

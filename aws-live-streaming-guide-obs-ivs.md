@@ -1,6 +1,7 @@
 # Live Streaming from a Windows 11 PC to AWS with OBS and Amazon IVS
 
-**Last verified:** June 28, 2026  
+**Last verified:** July 1, 2026  
+**Guide version:** v1.1.0  
 **Primary recommended path:** OBS Studio on Windows 11 → Amazon IVS Low-Latency Streaming → Amazon IVS Web Player in a browser  
 **Primary use case:** A simple, public, browser-viewable live stream from a home PC, with no viewer login required for the first test.
 
@@ -42,7 +43,7 @@
 | Stable internet connection | Your PC must upload the stream continuously. | Run a speed test. Your upload speed should comfortably exceed your target video bitrate. |
 | AWS account | Needed to create Amazon IVS resources. | You can sign in to the AWS Management Console. |
 | AWS billing access | Needed to monitor costs and create budgets. | You can open **Billing and Cost Management** and **AWS Budgets**. AWS Budgets supports cost budgets and alerts.[^aws-budgets] |
-| AWS permissions | Needed to create IVS channels, view billing, and optionally use IAM/CLI. | Use an administrator account for a lab account, or an IAM role/user with appropriate IVS and billing permissions. Avoid root credentials for daily work.[^iam-best-practices] |
+| AWS permissions | Needed to create IVS channels, view billing, and optionally use IAM/CLI. | Use an administrator-capable lab account, IAM Identity Center access, or an IAM user/group with explicit IVS and billing permissions. This guide now includes explicit setup steps in [Step 0](#step-0-set-up-aws-access-iam-and-permissions) and [Appendix M](#appendix-m-aws-access-iam-and-permissions-setup). Avoid root credentials for daily work.[^iam-best-practices] |
 | OBS Studio | The local encoder that captures screen/camera/audio and sends video to AWS. | Download OBS from the official OBS website. OBS supports Windows 10 and 11.[^obs-download] |
 | Modern browser | Needed to watch the stream. | Chrome, Edge, Firefox, or Safari are acceptable. For lowest IVS browser latency, use the Amazon IVS Web Player SDK.[^ivs-player-web] |
 | Optional AWS CLI v2 | Useful for repeatability and verification. Console instructions are primary. | Install and configure AWS CLI v2 if you want CLI examples.[^aws-cli-getting-started] |
@@ -52,7 +53,7 @@
 | Initial viewer assumption | Keeps the architecture appropriately simple. | This guide assumes a small public test stream or small audience, not a large enterprise broadcast. |
 | Region assumption | Examples use `us-west-2` unless noted. | Choose the AWS Region closest to you and supported by IVS. Amazon IVS is regional for control-plane resources.[^ivs-regions] |
 
-**Checkpoint:** You can sign in to AWS, you can install OBS, you know which AWS Region you will use, and you have non-sensitive content ready for testing.
+**Checkpoint:** You can sign in to AWS, you can install OBS, you know which AWS Region you will use, you know which IAM identity you will use, and you have non-sensitive content ready for testing.
 
 ---
 
@@ -224,16 +225,20 @@ This is the shortest safe path to prove that live streaming works.
 
 ### Quick-start steps
 
-1. **Sign in to AWS.**
+1. **Confirm AWS access and permissions.**
+   - Use a non-root AWS identity that can create IVS resources and view billing/budgets.
+   - If you do not already have that access, complete [Step 0](#step-0-set-up-aws-access-iam-and-permissions) before creating resources.
+
+2. **Sign in to AWS.**
    - Go to the AWS Management Console.
    - Choose the Region you want to use, such as `us-west-2`.
 
-2. **Open Amazon IVS.**
+3. **Open Amazon IVS.**
    - In the AWS Console search box, search for **Amazon IVS**.
    - Open the IVS console.
    - Make sure the Region selector is correct.
 
-3. **Create a channel.**
+4. **Create a channel.**
    - Go to **Channels**.
    - Choose **Create channel**.
    - Name it something like `home-test-live`.
@@ -242,19 +247,19 @@ This is the shortest safe path to prove that live streaming works.
    - Do **not** enable recording for the quick test.
    - Create the channel.
 
-4. **Copy the ingest endpoint, stream key, and playback URL.**
+5. **Copy the ingest endpoint, stream key, and playback URL.**
    - Treat the stream key as secret. AWS explicitly says the IVS stream key should be treated like a secret because it allows anyone to stream to the channel.[^ivs-create-channel]
    - Record these values in [Appendix H](#appendix-h-my-setup-values-worksheet).
 
-5. **Install OBS.**
+6. **Install OBS.**
    - Download from the official OBS site.
    - Install it on Windows 11.[^obs-download]
 
-6. **Create a safe OBS test scene.**
+7. **Create a safe OBS test scene.**
    - Add a color source, non-sensitive display, or webcam view that does not reveal private data.
    - Add microphone audio only if you are comfortable broadcasting it.
 
-7. **Configure OBS stream settings.**
+8. **Configure OBS stream settings.**
    - Open **Settings → Stream**.
    - Service: **Custom**.
    - Server: use the IVS ingest endpoint with `rtmps://` in front if needed.
@@ -264,15 +269,15 @@ This is the shortest safe path to prove that live streaming works.
      - Audio bitrate: 128–160 Kbps.
      - Keyframe interval: 2 seconds. AWS IVS encoder guidance highlights keyframe interval, resolution, bitrate, and frame rate as important settings and lists 2 seconds as a key setting in its streaming setup guidance.[^ivs-streaming-software]
 
-8. **Start streaming in OBS.**
+9. **Start streaming in OBS.**
    - Click **Start Streaming**.
    - Watch OBS status for dropped frames or connection errors.
 
-9. **View the stream.**
+10. **View the stream.**
    - Use the IVS playback URL in a player.
    - For the simplest browser test, use the HTML player in [Public playback setup](#public-playback-setup).
 
-10. **Stop streaming.**
+11. **Stop streaming.**
     - Click **Stop Streaming** in OBS.
     - Confirm IVS no longer shows an active stream.
 
@@ -293,6 +298,62 @@ Continue only if you want the full explanation, troubleshooting, CLI equivalents
 ---
 
 ## Step-by-step setup
+
+### Step 0: Set up AWS access, IAM, and permissions
+
+This step fills in an AWS-specific setup detail that is easy to gloss over: the guide later tells you to create IVS channels, view billing, and optionally use the AWS CLI, so your AWS identity must actually be allowed to do those things.
+
+AWS recommends that human users use federation with an identity provider and temporary credentials where possible, and that IAM users with long-term credentials be used only for specific cases that are not supported by federated users.[^iam-create-user] For a personal lab account, you might still use an IAM user, but you should understand that this is a convenience tradeoff, not the strongest production pattern.
+
+#### Recommended access pattern
+
+Use one of these patterns:
+
+| Pattern | When to use it | Notes |
+|---|---|---|
+| IAM Identity Center / federated access | Best practice for a real account or organization | Use a permission set that allows IVS setup and billing visibility. |
+| Existing administrator-capable lab user | Fastest for a personal test account | Acceptable for learning, but reduce permissions later. |
+| IAM user in an IAM group | Practical fallback for a personal lab | Create the user/group explicitly and attach only the needed policies. |
+
+#### IAM user/group fallback for a lab account
+
+Use this only if you are not using IAM Identity Center or another federated identity system.
+
+1. Sign in to the AWS Console as an account administrator.
+2. Open the **IAM** console.
+3. Choose **User groups**.
+4. Choose **Create group**.
+5. Name the group something like `aws-live-streaming-ivs-admins`.
+6. Attach the AWS managed policy `IVSFullAccess` for IVS setup. AWS documents `IVSFullAccess` as the AWS managed policy for all IVS and IVS Chat API operations and dependent permissions for full console access.[^ivs-managed-policies]
+7. For billing visibility, confirm whether root or an administrator has activated IAM access to Billing. AWS Billing documentation says IAM users and roles cannot access the Billing and Cost Management console by default; the account root user must first activate IAM access, and permissions must still be attached afterward.[^aws-billing-access]
+8. Attach billing permissions appropriate for the lab, such as `AWSBillingReadOnlyAccess` for viewing bills or `Billing` if you need to modify budgets/payment-related settings. AWS documents `Billing` as granting Billing and Cost Management permissions, including viewing usage and modifying budgets/payment methods.[^aws-billing-managed-policies]
+9. Choose **Create group**.
+10. Choose **Users**.
+11. Choose **Create user**.
+12. Enter a user name, such as `aws-live-streaming-lab-user`.
+13. If the user needs Console access, select the option to provide AWS Management Console access. IAM documentation notes that console access requires a password, and users still need permissions attached through policies or groups.[^iam-console-access]
+14. Add the user to the group you created.
+15. Finish creating the user.
+16. Enable MFA for the user before using the account for anything beyond a quick lab. AWS IAM best practices recommend MFA and least-privilege permissions.[^iam-best-practices]
+17. Create access keys only if you need the AWS CLI. AWS warns not to use root access keys and not to put access keys in project files.[^iam-access-keys]
+
+#### Minimum practical permissions for this IVS guide
+
+For a simple lab following this guide, the working identity needs enough access to:
+
+- Create, view, and delete IVS channels and stream keys.
+- View IVS stream health/status information.
+- Create or view AWS Budgets and billing information.
+- Optionally create recording-related resources if you later enable IVS recording.
+- Optionally use the AWS CLI.
+
+For a production account, do not leave broad full-access policies in place. Start with managed policies while learning, then move toward least privilege after you know exactly which services and actions you need.
+
+**Expected result:** You have a non-root AWS identity that can create IVS resources, view billing/budgets, and optionally use the AWS CLI.
+
+**Checkpoint:** You can sign in as the intended IAM/federated user and open Amazon IVS, AWS Budgets, and Billing without permission errors.
+
+---
 
 ### Step 1: Sign in and choose a Region
 
@@ -1007,7 +1068,7 @@ See [Glossary](#glossary). Add new terms to this appendix as the guide evolves.
 <details>
 <summary><strong>Appendix G: Source links and last-verified notes</strong></summary>
 
-**Last verified:** June 28, 2026.
+**Last verified:** July 1, 2026.
 
 Official sources used:
 
@@ -1040,6 +1101,17 @@ Official sources used:
 [^mediaconnect-pricing]: MediaConnect pricing: https://aws.amazon.com/mediaconnect/pricing/  
 [^lightsail-pricing]: Lightsail pricing: https://aws.amazon.com/lightsail/pricing/  
 [^ec2-pricing]: EC2 On-Demand pricing: https://aws.amazon.com/ec2/pricing/on-demand/  
+
+[^ivs-iam-permissions]: Amazon IVS setup IAM permissions: https://docs.aws.amazon.com/ivs/latest/LowLatencyUserGuide/getting-started-iam-permissions.html  
+[^ivs-managed-policies]: Amazon IVS managed policies: https://docs.aws.amazon.com/ivs/latest/LowLatencyUserGuide/security-iam-awsmanpol.html  
+[^iam-create-user]: Create an IAM user: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html  
+[^iam-create-group]: Create IAM groups: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_groups_create.html  
+[^iam-console-access]: Control IAM user access to the AWS Management Console: https://docs.aws.amazon.com/IAM/latest/UserGuide/console_controlling-access.html  
+[^iam-access-keys]: Manage access keys for IAM users: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html  
+[^aws-billing-access]: Overview of managing access permissions in AWS Billing: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/control-access-billing.html  
+[^aws-billing-managed-policies]: AWS Billing managed policies: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/managed-policies.html  
+
+No Cloudflare-specific source is cited in this version because the guides do not currently include Cloudflare-specific DNS, proxy, or hosting steps. If Cloudflare DNS or proxying is added later, official Cloudflare documentation should be verified and cited in this appendix.
 
 Known likely-to-change areas:
 
@@ -1126,6 +1198,63 @@ Known likely-to-change areas:
 | OBS Stream settings | Step 7 | Shows where Server and Stream Key go. |
 | Browser player page | Step 10 | Confirms what success looks like. |
 | Cleanup checklist screenshot | Cleanup section | Reinforces cost control. |
+
+</details>
+
+<details>
+<summary><strong>Appendix M: AWS access, IAM, and permissions setup</strong></summary>
+
+This appendix gives more explicit AWS access setup instructions for readers who are new to IAM.
+
+## Best-practice reminder
+
+AWS recommends federation with temporary credentials for human users where possible, MFA, least-privilege permissions, and not using the root user for everyday tasks.[^iam-best-practices] Use this appendix to get a lab working, then tighten permissions after you know exactly which actions you need.
+
+## Option A: Use IAM Identity Center or an existing administrator-approved role
+
+Use this option if your AWS account belongs to an organization or if someone else manages AWS access.
+
+1. Ask your AWS administrator for access to the target AWS account.
+2. Ask for permission to create and manage IVS channels, stream keys, budgets, and optional S3 recording resources.
+3. Ask whether billing access is enabled for IAM/role identities.
+4. Sign in using the provided AWS access portal or role.
+5. Verify you can open Amazon IVS, AWS Budgets, and Billing.
+
+## Option B: Create an IAM group and user for a personal lab
+
+1. Sign in as the account owner or an administrator.
+2. Open the **IAM** console.
+3. Choose **User groups** → **Create group**.
+4. Name the group `aws-live-streaming-ivs-admins`.
+5. Attach `IVSFullAccess`.
+6. Attach `AWSBillingReadOnlyAccess` if the user only needs to view billing, or `Billing` if the user needs to create/update budgets and billing settings.
+7. Choose **Create group**.
+8. Choose **Users** → **Create user**.
+9. Name the user `aws-live-streaming-lab-user`.
+10. Select Console access only if this user needs to sign in to the AWS Console.
+11. Add the user to the group.
+12. Finish user creation.
+13. Enable MFA.
+14. Create access keys only if you will use AWS CLI; never create or use root access keys.
+
+## IVS permission quick reference
+
+| Need | Starter policy or approach |
+|---|---|
+| Create/manage IVS channels and stream keys | `IVSFullAccess` |
+| Read-only IVS review | `IVSReadOnlyAccess` |
+| Billing visibility only | `AWSBillingReadOnlyAccess` after IAM billing access is activated |
+| Budget/billing changes | `Billing` or more specific customer-managed policy |
+| Auto-record to S3 | Additional S3 and service-linked role behavior may be involved; verify before enabling recording |
+
+## Verification checklist
+
+- [ ] You are not using root for routine work.
+- [ ] MFA is enabled.
+- [ ] The intended user can open Amazon IVS.
+- [ ] The intended user can create an IVS channel.
+- [ ] The intended user can open AWS Budgets/Billing as needed.
+- [ ] Any access keys are stored securely and not committed to Git.
 
 </details>
 

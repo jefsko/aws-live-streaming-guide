@@ -58,17 +58,31 @@ aws-live-streaming-guide-obs-medialive.md
 
 ## Version
 
-Current version: **v1.0.0**
+Current version: **v1.1.0**
 
-This is the initial repository version containing the two guide variants:
+This repository currently contains the two companion guide variants:
 
 1. OBS to Amazon IVS
 2. OBS to AWS Elemental MediaLive
+
+
+## v1.1.0 update highlights
+
+Version **v1.1.0** keeps the two guides aligned as companion documents and adds more explicit AWS setup guidance, especially around IAM users, groups, roles, service permissions, billing access, and MediaLive service-role setup.
+
+The update also refreshes the source-verification date and clarifies that no Cloudflare-specific steps are currently included in the guides.
 
 ## Recommended initial commit message
 
 ```text
 Add AWS live streaming guide variants
+```
+
+
+## Recommended v1.1.0 commit message
+
+```text
+Add explicit AWS IAM setup guidance to streaming guides
 ```
 
 ## Notes
