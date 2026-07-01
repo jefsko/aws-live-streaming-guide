@@ -4,40 +4,53 @@ All notable changes to this repository will be documented in this file.
 
 This project follows semantic versioning-style release labels where practical.
 
-## [v1.1.0] - AWS access and synchronization update
+## [v1.1.0] - Quick-start and IAM guidance update
 
 ### Added
 
-- Added explicit AWS access, IAM, role, and permissions setup guidance to both companion guides.
-- Added `Step 0` sections before the main AWS setup walkthroughs:
-  - IVS guide: AWS access, IAM, and permissions setup.
-  - MediaLive guide: AWS access, IAM, roles, and permissions setup.
-- Added Appendix M to both guides:
-  - IVS guide: AWS access, IAM, and permissions setup.
-  - MediaLive guide: AWS access, IAM, roles, and permissions setup.
-- Added clearer guidance for IAM users, IAM groups, managed policies, billing access, MFA, CLI access keys, and least-privilege follow-up.
-- Added official AWS source links for IAM user/group setup, IVS managed policies, MediaLive managed policies, MediaLive service-role setup, MediaPackage v2 managed policies, CloudFront managed policies, and AWS Billing access.
+- Added quick-start companion guide for the Amazon IVS path:
+  - `aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md`
+  - Condenses the full IVS guide into a shorter, sequential setup path.
+  - Points readers back to the full IVS guide for IAM setup, deeper explanations, troubleshooting, security, cleanup, and appendixes.
+
+- Added quick-start companion guide for the AWS Elemental MediaLive path:
+  - `aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md`
+  - Condenses the full MediaLive guide into a shorter, sequential setup path.
+  - Clearly calls out that the MediaLive route is more advanced than the IVS route.
+  - Points readers back to the full MediaLive guide for IAM/service-role setup, deeper explanations, troubleshooting, security, cleanup, and appendixes.
+
+- Added one-page cheat sheet for the Amazon IVS path:
+  - `aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md`
+
+- Added one-page cheat sheet for the AWS Elemental MediaLive path:
+  - `aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md`
+
+- Added explicit AWS IAM/access setup guidance to the full guides:
+  - Step 0 in each full guide
+  - Appendix M in each full guide
+  - IAM Identity Center/federated access guidance
+  - IAM user/group fallback guidance for personal lab accounts
+  - MFA, billing access, optional CLI access-key, and managed-policy guidance
+
+- Updated README navigation:
+  - Added a “Which file should I open first?” section.
+  - Added quick-start guide and cheat-sheet links.
+  - Clarified when to use quick starts, full guides, and cheat sheets.
 
 ### Changed
 
-- Updated both guide versions to `v1.1.0`.
-- Updated both guide `Last verified` dates to July 1, 2026.
-- Updated prerequisites in both guides to point readers to the new explicit AWS access setup instructions.
-- Updated quick-start paths in both guides to tell readers to confirm AWS access and permissions before creating resources.
-- Updated the MediaLive guide to start OBS streaming before starting the MediaLive channel for the RTMP Push workflow, matching AWS MediaLive guidance that a push input should be pushing before the channel starts.
-- Updated README current version to `v1.1.0`.
-
-### Verified
-
-- Re-checked official AWS and OBS source links used by both guides.
-- Confirmed no Cloudflare-specific source links or Cloudflare-specific implementation steps are currently present in the guides.
-- Verified both guides retain the same companion-guide structure while allowing guide-specific IVS and MediaLive details.
-- Verified Markdown footnote references and definitions are balanced in both updated guides.
+- Updated current repository version to `v1.1.0`.
+- Updated the full guide metadata to v1.1.0.
+- Updated last-verified notes in the full guides.
+- Corrected the MediaLive RTMP Push start order so OBS starts pushing before the MediaLive channel starts.
 
 ### Notes
 
-- This is an additive companion-guide update. The core guide structure and v1.0.0 content were preserved while adding explicit AWS setup detail and correcting the MediaLive RTMP Push start-order guidance.
-
+- The v1.1.0 quick-start guides and cheat sheets are based on the v1.1.0 full guides.
+- The IVS path remains the simpler route.
+- The MediaLive path remains the more advanced AWS media workflow.
+- Recommended commit message:
+  - `Add quick-start guides and cheat sheets`
 
 ## [v1.0.0] - Initial release
 

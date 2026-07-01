@@ -2,22 +2,41 @@
 
 Step-by-step guides for live streaming from OBS to AWS using Amazon IVS or AWS Elemental MediaLive.
 
-This repository contains two step-by-step AWS live streaming guides for sending a live audio/video stream from **OBS Studio** to AWS and making the stream viewable in a browser.
+This repository contains full guides, quick-start guides, and one-page cheat sheets for sending a live audio/video stream from **OBS Studio** to AWS and making the stream viewable in a browser.
 
 The guides are written for technical users who are new to streaming engineering. They emphasize clear setup steps, AWS Console walkthroughs, billing awareness, verification checkpoints, troubleshooting, security notes, and cleanup steps.
 
+## Which file should I open first?
+
+| Goal | Start here |
+|---|---|
+| I want the simplest AWS-native OBS streaming path. | [`aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md`](aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md) |
+| I want a quick reminder after I already understand the IVS path. | [`aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md`](aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md) |
+| I need the full IVS explanation, IAM setup, troubleshooting, and appendixes. | [`aws-live-streaming-guide-obs-ivs-v1.1.0.md`](aws-live-streaming-guide-obs-ivs-v1.1.0.md) |
+| I specifically need AWS Elemental MediaLive. | [`aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md`](aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md) |
+| I want a quick reminder after I already understand the MediaLive path. | [`aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md`](aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md) |
+| I need the full MediaLive explanation, IAM/service-role setup, troubleshooting, and appendixes. | [`aws-live-streaming-guide-obs-medialive-v1.1.0.md`](aws-live-streaming-guide-obs-medialive-v1.1.0.md) |
+
 ## Guides
 
-| Guide | Recommended path | Best for |
-|---|---|---|
-| [`aws-live-streaming-guide-obs-ivs.md`](aws-live-streaming-guide-obs-ivs.md) | OBS Studio → Amazon IVS → browser playback | Simpler, lower-complexity AWS-native live streaming |
-| [`aws-live-streaming-guide-obs-medialive.md`](aws-live-streaming-guide-obs-medialive.md) | OBS Studio → AWS Elemental MediaLive → MediaPackage v2 → CloudFront → browser playback | More advanced broadcast-style AWS media workflows |
+| File | Type | Recommended path | Best for |
+|---|---|---|---|
+| [`aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md`](aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md) | Quick start | OBS Studio → Amazon IVS → browser playback | First-time setup using the simpler AWS-native route |
+| [`aws-live-streaming-guide-obs-ivs-v1.1.0.md`](aws-live-streaming-guide-obs-ivs-v1.1.0.md) | Full guide | OBS Studio → Amazon IVS → browser playback | Detailed IVS explanation, IAM setup, troubleshooting, security, cleanup |
+| [`aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md`](aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md) | Cheat sheet | OBS Studio → Amazon IVS → browser playback | Fast repeat reference |
+| [`aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md`](aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md) | Quick start | OBS Studio → MediaLive → MediaPackage v2 → CloudFront → browser playback | First-time setup using the advanced MediaLive route |
+| [`aws-live-streaming-guide-obs-medialive-v1.1.0.md`](aws-live-streaming-guide-obs-medialive-v1.1.0.md) | Full guide | OBS Studio → MediaLive → MediaPackage v2 → CloudFront → browser playback | Detailed MediaLive explanation, IAM/service-role setup, troubleshooting, security, cleanup |
+| [`aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md`](aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md) | Cheat sheet | OBS Studio → MediaLive → MediaPackage v2 → CloudFront → browser playback | Fast repeat reference |
 
 ## Which guide should I use?
 
-Start with the **Amazon IVS guide** if your main goal is to get an OBS stream publicly viewable in a browser with the least AWS complexity.
+Start with the **Amazon IVS quick-start guide** if your main goal is to get an OBS stream publicly viewable in a browser with the least AWS complexity.
 
-Use the **AWS Elemental MediaLive guide** if you specifically want to learn or use a more advanced AWS media pipeline involving MediaLive, MediaPackage, and CloudFront.
+Use the **AWS Elemental MediaLive quick-start guide** if you specifically want to learn or use a more advanced AWS media pipeline involving MediaLive, MediaPackage v2, and CloudFront.
+
+Use the **full guides** when you need more background, IAM instructions, AWS Console explanations, troubleshooting, security guidance, cleanup details, CLI notes, or appendixes.
+
+Use the **cheat sheets** only after you understand the workflow and want a compact repeat checklist.
 
 ## Target audience
 
@@ -31,10 +50,11 @@ These guides are intended for:
 
 ## Topics covered
 
-The guides cover:
+The full guides cover:
 
 - OBS Studio setup on Windows 11
 - AWS account and billing prerequisites
+- AWS IAM/access setup guidance
 - Public browser playback concepts
 - Amazon IVS live streaming
 - AWS Elemental MediaLive live streaming
@@ -47,46 +67,37 @@ The guides cover:
 - Cleanup and cost-control steps
 - Glossaries, indexes, and appendixes
 
+The quick-start guides condense the full workflows into shorter, sequential setup paths.
+
+The cheat sheets provide one-page repeat-use reminders.
+
 ## Repository contents
 
 ```text
 README.md
 CHANGELOG.md
-aws-live-streaming-guide-obs-ivs.md
-aws-live-streaming-guide-obs-medialive.md
+aws-live-streaming-guide-obs-ivs-v1.1.0.md
+aws-live-streaming-guide-obs-medialive-v1.1.0.md
+aws-live-streaming-quick-start-guide-obs-ivs-v1.1.0.md
+aws-live-streaming-quick-start-guide-obs-medialive-v1.1.0.md
+aws-live-streaming-cheat-sheet-obs-ivs-v1.1.0.md
+aws-live-streaming-cheat-sheet-obs-medialive-v1.1.0.md
 ```
 
 ## Version
 
 Current version: **v1.1.0**
 
-This repository currently contains the two companion guide variants:
+The quick-start guides and cheat sheets are based on the v1.1.0 full guides.
 
-1. OBS to Amazon IVS
-2. OBS to AWS Elemental MediaLive
-
-
-## v1.1.0 update highlights
-
-Version **v1.1.0** keeps the two guides aligned as companion documents and adds more explicit AWS setup guidance, especially around IAM users, groups, roles, service permissions, billing access, and MediaLive service-role setup.
-
-The update also refreshes the source-verification date and clarifies that no Cloudflare-specific steps are currently included in the guides.
-
-## Recommended initial commit message
+## Recommended commit message
 
 ```text
-Add AWS live streaming guide variants
-```
-
-
-## Recommended v1.1.0 commit message
-
-```text
-Add explicit AWS IAM setup guidance to streaming guides
+Add quick-start guides and cheat sheets
 ```
 
 ## Notes
 
-AWS service names, Console workflows, pricing, limits, and supported features can change over time. Each guide includes a last-verified date and source links for important AWS and OBS references.
+AWS service names, Console workflows, pricing, limits, and supported features can change over time. The full guides include last-verified dates and source links for important AWS and OBS references.
 
 Always verify current AWS pricing and service behavior before running long live streams or leaving AWS resources active.
